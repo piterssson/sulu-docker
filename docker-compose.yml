@@ -1,0 +1,64 @@
+version: '2'
+
+services:
+    db:
+        image: mysql:5.7
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+        ports:
+            - 8989:3306
+    db_test:
+        image: mysql:5.7
+        environment:
+            MYSQL_ROOT_PASSWORD: ${TEST_MYSQL_ROOT_PASSWORD}
+            MYSQL_DATABASE: ${TEST_MYSQL_DATABASE}
+            MYSQL_USER: ${TEST_MYSQL_USER}
+            MYSQL_PASSWORD: ${TEST_MYSQL_PASSWORD}
+        ports:
+            - 8990:3306
+    php:
+        build:
+            context: docker/php7-fpm
+            args:
+                TIMEZONE: ${TIMEZONE}
+        volumes:
+            - ${SYMFONY_APP_PATH}:/var/www/symfony
+            - ./logs/symfony:/var/www/symfony/app/logs
+        links:
+            - db:db
+            - db_test:db_test
+    nginx:
+        build: docker/nginx
+        ports:
+            - 80:80
+        volumes_from:
+            - php
+        volumes:
+            - ./logs/nginx/:/var/log/nginx
+    phpmyadmin:
+        image: phpmyadmin/phpmyadmin
+        environment:
+         - PMA_ARBITRARY=1
+         - PMA_HOST=db
+         - PMA_USER=${MYSQL_USER}
+         - PMA_PASSWORD=${MYSQL_PASSWORD}
+        restart: always
+        ports:
+         - 181:80
+        volumes:
+         - /sessions
+    phpmyadmin_test:
+        image: phpmyadmin/phpmyadmin
+        environment:
+         - PMA_ARBITRARY=1
+         - PMA_HOST=db_test
+         - PMA_USER=${TEST_MYSQL_USER}
+         - PMA_PASSWORD=${TEST_MYSQL_PASSWORD}
+        restart: always
+        ports:
+         - 183:80
+        volumes:
+         - /sessions
